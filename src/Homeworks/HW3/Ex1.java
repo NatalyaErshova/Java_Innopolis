@@ -1,4 +1,4 @@
-package Homeworks.HW1;
+package Homeworks.HW3;
 
 import java.util.Scanner; // Импортируем класс Scanner из пакета java.util
 
