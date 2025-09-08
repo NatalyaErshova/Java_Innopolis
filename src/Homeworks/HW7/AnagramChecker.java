@@ -33,8 +33,12 @@ public class AnagramChecker {
             return false; // Возвращаем сразу false
         }
 
-        char[] sArray = s.toCharArray(); // Преобразуем строки в массивы символов
-        char[] tArray = t.toCharArray();
+        // Преобразуем строки в нижний регистр перед сравнением
+        String sLower = s.toLowerCase();
+        String tLower = t.toLowerCase();
+
+        char[] sArray = sLower.toCharArray(); // Преобразуем строки в массивы символов
+        char[] tArray = tLower.toCharArray();
 
         Arrays.sort(sArray); //Сортируем символы
         Arrays.sort(tArray);
