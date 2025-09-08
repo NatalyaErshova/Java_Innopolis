@@ -1,13 +1,31 @@
 package Homeworks.attestation01;
 import java.util.*;
+import java.time.LocalDate;
 
 class Product {
     private final String name;
     private int price;
 
     public Product(String name, int price) {
+        validateName(name);
+        validatePrice(price);
         this.name = name;
         this.price = price;
+    }
+
+    private void validateName(String name) {
+        if (name.length() < 3) {
+            throw new IllegalArgumentException("Название продукта должно содержать не менее 3 символов");
+        }
+        if (name.matches("\\d+")) {
+            throw new IllegalArgumentException("Название продукта не должно содержать только цифры");
+        }
+    }
+
+    private void validatePrice(double price) {
+        if (price <= 0) {
+            throw new IllegalArgumentException("Цена продукта должна быть положительной");
+        }
     }
 
     public String getName() {
@@ -40,6 +58,62 @@ class Product {
     }
 }
 
+class DiscountProduct extends Product {
+    private final double discountPercentage;
+    private final LocalDate discountEndDate;
+
+    public DiscountProduct(String name, int price, double discountPercentage, LocalDate discountEndDate) {
+        super(name, price);
+        this.discountPercentage = discountPercentage;
+        this.discountEndDate = discountEndDate;
+    }
+
+    public double getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public LocalDate getDiscountEndDate() {
+        return discountEndDate;
+    }
+
+    public int getDiscountedPrice() {
+        if (isDiscountValid()) {
+            return (int) (getPrice() * (1 - discountPercentage / 100));
+        }
+        return getPrice(); // Если скидка не действительна, цена обычная
+    }
+
+    public boolean isDiscountValid() {
+        return LocalDate.now().isBefore(discountEndDate);
+    }
+
+    @Override
+    public String toString() {
+        return "Скидочный продукт{" +
+                "название='" + getName() + '\'' +
+                ", стоимость=" + getPrice() +
+                ", процент скидки=" + discountPercentage +
+                ", срок действия скидки до=" + discountEndDate +
+                ", цена со скидкой=" + getDiscountedPrice() +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DiscountProduct)) return false;
+        if (!super.equals(o)) return false;
+        DiscountProduct that = (DiscountProduct) o;
+        return Double.compare(that.discountPercentage, discountPercentage) == 0 &&
+                discountEndDate.equals(that.discountEndDate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), discountPercentage, discountEndDate);
+    }
+}
+
 class Person {
     private String name;
     private int money;
@@ -65,9 +139,16 @@ class Person {
     }
 
     public boolean addProduct(Product product) {
-        if (product.getPrice() <= money) {
+        double price;
+        if(product instanceof DiscountProduct) {
+            DiscountProduct discountProduct = (DiscountProduct) product;
+            price = discountProduct.getDiscountedPrice();
+        } else {
+            price = product.getPrice();
+        }
+        if (price <= money) {
             cart.add(product);
-            money -= product.getPrice();
+            money -= price;
             return true;
         } else {
             System.out.println("Недостаточно денег для покупки продукта: " + product.getName());
@@ -102,7 +183,7 @@ public class App {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Введите покупателей в формате 'Имя = Деньги';:");
+        System.out.println("Введите покупателей в формате 'Имя = Деньги'; одной строкой:");
         String personInput = scanner.nextLine();
         List<Person> persons = new ArrayList<>();
 
@@ -118,7 +199,7 @@ public class App {
             }
         }
 
-        System.out.println("Введите продукты в формате 'Продукт = Стоимость';:");
+        System.out.println("Введите продукты в формате 'Продукт = Стоимость'; одной строкой:");
         String productInput = scanner.nextLine();
         List<Product> products = new ArrayList<>();
 
@@ -131,6 +212,24 @@ public class App {
                 String name = parts[0].trim();
                 int price = Integer.parseInt(parts[1].trim());
                 products.add(new Product(name, price));
+            }
+        }
+
+        System.out.println("Введите скидочные продукты в формате 'Скидочный продукт = Стоимость = % скидки = срок действия (дата)'; одной строкой:");
+        String DiscountProductInput = scanner.nextLine();
+
+        String[] DiscountProductEntries = DiscountProductInput.split(";");
+
+        for (String entry : DiscountProductEntries) {
+            entry = entry.trim();
+            if (!entry.isEmpty()) {
+                String[] parts = entry.split("=");
+                String name = parts[0].trim();
+                int price = Integer.parseInt(parts[1].trim());
+                double discountPercentage = Double.parseDouble(parts[2].trim());
+                LocalDate discountEndDate = LocalDate.parse(parts[3].trim());
+
+                products.add(new DiscountProduct(name, price, discountPercentage,discountEndDate));
             }
         }
 
@@ -147,8 +246,18 @@ public class App {
             Product product = findProductByName(products, productName);
 
             if (person != null && product != null) {
+                double price;
+
+                if (product instanceof DiscountProduct) {
+                    // Если это DiscountProduct, получаем цену со скидкой
+                    price = ((DiscountProduct) product).getDiscountedPrice();
+                } else {
+                    // Для обычного продукта используем обычную цену
+                    price = product.getPrice();
+                }
+
                 if (person.addProduct(product)) {
-                    System.out.println(personName + " купил " + productName);
+                    System.out.println(personName + " купил/а " + productName + " за " + price);
                     purchaseResults.putIfAbsent(personName, new ArrayList<>());
                     purchaseResults.get(personName).add(product);
                 } else {
